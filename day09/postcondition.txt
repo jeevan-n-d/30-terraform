@@ -1,0 +1,29 @@
+data "aws_region" "current" {}
+
+resource "aws_s3_bucket" "compliance_bucket" {
+  bucket = "compliance-bucket-${var.environment}-${data.aws_region.current.name}"
+
+  tags = merge(
+    var.resource_tags,
+    {
+      Name       = "Compliance Validated Bucket"
+      Demo       = "postcondition"
+      Compliance = "SOC2"
+      #Environment = var.environment
+    }
+  )
+
+  # Lifecycle Rule: Validate bucket has required tags after creation
+  # This ensures compliance with organizational tagging policies
+  lifecycle {
+    postcondition {
+      condition     = contains(keys(self.tags), "Compliance")
+      error_message = "ERROR: Bucket must have a 'Compliance' tag for audit purposes!"
+    }
+
+    postcondition {
+      condition     = contains(keys(self.tags), "Environment")
+      error_message = "ERROR: Bucket must have an 'Environment' tag!"
+    }
+  }
+}

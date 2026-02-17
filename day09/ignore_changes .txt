@@ -1,0 +1,67 @@
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+
+resource "aws_launch_template" "app_server" {
+  name_prefix   = "app-server-"
+  image_id      = data.aws_ami.amazon_linux_2.id
+  instance_type = var.allowed_vm_types[0]
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge(
+      var.resource_tags,
+      {
+        Name = "App Server from ASG"
+        Demo = "ignore_changes"
+      }
+    )
+  }
+}
+
+resource "aws_autoscaling_group" "app_servers" {
+  name               = "app-servers-asg"
+  min_size           = 1
+  max_size           = 5
+  desired_capacity   = 2
+  health_check_type  = "EC2"
+  availability_zones = var.availability_zones
+
+  launch_template {
+    id      = aws_launch_template.app_server.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "App Server ASG"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "Demo"
+    value               = "ignore_changes"
+    propagate_at_launch = false
+  }
+
+    lifecycle {
+    ignore_changes = [
+      desired_capacity,
+      # Also ignore load_balancers if added later by other processes
+    ]
+  }
+
+
+}
