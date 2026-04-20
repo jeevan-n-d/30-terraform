@@ -1,0 +1,304 @@
+In Terraform, **lifecycle rules** are used inside a `resource` block to control **how Terraform creates, updates, or deletes infrastructure**. They’re like safety controls for real-world resources.
+
+---
+
+## 🔧 Where lifecycle is used
+
+```hcl
+resource "aws_instance" "example" {
+  ami           = "ami-12345678"
+  instance_type = "t2.micro"
+
+  lifecycle {
+    # rules go here
+  }
+}
+```
+
+---
+
+## 🚀 Main Lifecycle Rules
+
+### 1. `create_before_destroy`
+
+👉 Creates a new resource **before deleting the old one**
+
+```hcl
+lifecycle {
+  create_before_destroy = true
+}
+```
+
+**Why?**
+
+* Avoid downtime (very important in production)
+* Example: replacing an EC2 instance without service interruption
+
+---
+
+### 2. `prevent_destroy`
+
+👉 Stops Terraform from deleting a resource
+
+```hcl
+lifecycle {
+  prevent_destroy = true
+}
+```
+
+**Why?**
+
+* Protect critical resources (DBs, S3 buckets)
+
+⚠️ If you try `terraform destroy`, it will throw an error.
+
+---
+
+### 3. `ignore_changes`
+
+👉 Ignores changes to specific attributes
+
+```hcl
+lifecycle {
+  ignore_changes = [tags]
+}
+```
+
+**Why?**
+
+* When something is modified outside Terraform (manual changes)
+* Prevent unnecessary updates
+
+---
+
+### 4. `replace_triggered_by`
+
+👉 Forces resource replacement when something else changes
+
+```hcl
+lifecycle {
+  replace_triggered_by = [aws_security_group.sg]
+}
+```
+
+**Why?**
+
+* Ensure dependency-based updates
+* Example: recreate instance if security group changes
+
+---
+
+## 🧠 Real Example
+
+```hcl
+resource "aws_instance" "example" {
+  ami           = "ami-12345678"
+  instance_type = "t2.micro"
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = [tags]
+  }
+}
+```
+
+---
+
+## ⚠️ Important Notes
+
+* Lifecycle rules **do NOT change cloud behavior**, only Terraform behavior
+* Use carefully — especially `prevent_destroy` (can block operations)
+* `ignore_changes` can hide real drift if overused
+
+---
+
+## 💡 Interview-Level Insight
+
+* Lifecycle is part of Terraform’s **resource graph execution**
+* Helps control **immutability vs in-place updates**
+* Often used in **zero-downtime deployments**
+* Key in production-grade infra design
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Data sources in Terraform** are used to **read (fetch) information about existing infrastructure** instead of creating new resources.
+
+---
+
+# 🧠 Simple idea
+
+* `resource` → **creates something**
+* `data` → **reads something that already exists**
+
+---
+
+# 🔍 Basic syntax
+
+```hcl
+data "aws_ami" "example" {
+  most_recent = true
+  owners      = ["amazon"]
+}
+```
+
+👉 This does **NOT create an AMI**
+👉 It just **fetches details of an existing AMI**
+
+---
+
+# ⚡ Why data sources are important
+
+They make your code:
+
+* Dynamic (no hardcoding)
+* Reusable
+* Environment-aware
+
+---
+
+# 🚀 Real examples
+
+## 1. Get latest AMI
+
+```hcl
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*"]
+  }
+}
+```
+
+👉 Use:
+
+```hcl
+ami = data.aws_ami.amazon_linux.id
+```
+
+---
+
+## 2. Get current region
+
+```hcl
+data "aws_region" "current" {}
+```
+
+👉 Use:
+
+```hcl
+data.aws_region.current.name
+```
+
+---
+
+## 3. Get availability zones
+
+```hcl
+data "aws_availability_zones" "available" {}
+```
+
+👉 Use:
+
+```hcl
+data.aws_availability_zones.available.names[0]
+```
+
+---
+
+## 4. Read existing VPC
+
+```hcl
+data "aws_vpc" "existing" {
+  id = "vpc-123456"
+}
+```
+
+---
+
+# 🔥 Where you already used it
+
+From your project:
+
+```hcl
+availability_zone = data.aws_availability_zones.primary.names[0]
+```
+
+👉 You didn’t create AZs
+👉 You just fetched available ones
+
+---
+
+# ⚠️ Important differences
+
+| Feature        | resource | data source |
+| -------------- | -------- | ----------- |
+| Creates infra  | ✅ Yes    | ❌ No        |
+| Reads existing | ❌ No     | ✅ Yes       |
+| Managed by TF  | ✅ Yes    | ❌ No        |
+
+---
+
+# 🧠 Real-world use cases
+
+* Fetch latest AMI (avoid hardcoding)
+* Use existing VPC/Subnet
+* Get account info
+* Get secrets (SSM, Secrets Manager)
+* Multi-region setups (like your project)
+
+---
+
+# ⚠️ Common mistakes
+
+❌ Thinking data source creates resources
+❌ Using wrong filters → returns nothing
+❌ Forgetting `most_recent` → random results
+
+---
+
+# 🧠 Interview answer (strong)
+
+> “Data sources in Terraform are used to query and retrieve information about existing resources from a provider. They help avoid hardcoding values and make infrastructure configurations dynamic and reusable.”
+
+---
+
+# 💡 One-liner to remember
+
+👉 **Resource = create**
+👉 **Data = read**
+
+---
+
+If you want next:
+
+* I can show **resource vs data in same project (best way to understand)**
+* Or give **real interview scenarios using data sources**
+* Or debug your current project using data sources step-by-step
+
+
+
+
+
+
